@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbor House </title>
+    <style>
+        :root {
+            --bg-color: #f4f4f0; 
+            --text-color: #2b2b2b;
+            --accent-color: #d45d00;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --ease: cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            overflow-x: hidden;
+            line-height: 1.6;
+            cursor: default;
+        }
+
+        /* --- PRELOADER --- */
+        .preloader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; z-index: 20000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white; transition: transform 1.2s var(--ease);
+        }
+        .preloader.hide { transform: translateY(-100%); }
+        
+        .preloader-title { font-size: 2rem; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 1rem; }
+        .preloader-note { font-size: 0.9rem; color: #888; display: flex; align-items: center; gap: 10px; margin-bottom: 3rem; }
+        .enter-btn {
+            padding: 1rem 3rem; border: 1px solid rgba(255,255,255,0.3);
+            background: transparent; color: white; text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; transition: 0.3s; font-size: 0.8rem;
+        }
+        .enter-btn:hover { background: white; color: black; }
+
+        /* --- AUDIO PLAYER --- */
+        .audio-player {
+            position: fixed; bottom: 30px; right: 30px; z-index: 1000;
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            padding: 10px 20px; border-radius: 30px;
+            opacity: 0; transition: opacity 1s 1s; 
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .loaded .audio-player { opacity: 1; }
+        
+        .play-btn {
+            background: none; border: none; cursor: pointer; display: flex; align-items: center;
+            width: 20px; height: 20px;
+        }
+        .play-btn svg { width: 100%; height: 100%; fill: #333; }
+        .volume-slider { width: 60px; height: 3px; -webkit-appearance: none; background: #ccc; outline: none; border-radius: 2px; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: #333; border-radius: 50%; cursor: pointer; }
+
+        /* --- NAVIGATION --- */
+        nav {
+            position: fixed; top: 0; width: 100%; padding: 2rem 4rem;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 100; mix-blend-mode: difference; color: white;
+        }
+        .logo { font-weight: 700; letter-spacing: -0.5px; text-transform: uppercase; font-size: 0.9rem; }
+        .nav-links span { 
+            margin-left: 2rem; font-size: 0.85rem; cursor: pointer; 
+            text-transform: uppercase; display: inline-block; transition: transform 0.3s ease;
+        }
+        .nav-links span:hover { transform: scale(1.1); opacity: 0.8; }
+
+        /* --- HERO --- */
+        .hero {
+            height: 100vh; width: 100%; position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .hero-img {
+            position: absolute; top: 0; left: 0; width: 100%; height: 115%;
+            object-fit: cover; z-index: 1;
+            background-image: url('images/exterior/main.jpg');
+            background-position: center; background-size: cover;
+            will-change: transform;
+        }
+        .hero-content {
+            position: relative; z-index: 2; text-align: center; color: white;
+            opacity: 0; transform: translateY(30px); transition: 1.5s ease;
+        }
+        .loaded .hero-content { opacity: 1; transform: translateY(0); }
+        .hero-title { font-size: 6vw; font-weight: 300; letter-spacing: -3px; margin-bottom: 1rem; line-height: 1; }
+
+        /* --- LAYOUT & SECTIONS --- */
+        .container { max-width: 1400px; margin: 0 auto; padding: 6rem 2rem; }
+        .reveal { opacity: 0; transform: translateY(40px); transition: all 1s var(--ease); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        /* --- NEW DESCRIPTION SECTION --- */
+        .intro-grid {
+            display: grid; grid-template-columns: 0.4fr 0.6fr; gap: 4rem;
+            margin-bottom: 8rem; border-bottom: 1px solid #ddd; padding-bottom: 4rem;
+        }
+        .intro-header h2 { font-size: 2.5rem; font-weight: 400; line-height: 1.1; margin-bottom: 1rem; }
+        .intro-header .specs { font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .intro-text p { margin-bottom: 1.5rem; font-size: 1.1rem; color: #444; }
+        
+        @media (max-width: 768px) { .intro-grid { grid-template-columns: 1fr; } }
+
+        /* --- MAP SECTION --- */
+        .map-section {
+            position: relative; background: #fff; padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05); border-radius: 4px;
+        }
+        .map-controls { display: flex; gap: 2rem; margin-bottom: 2rem; justify-content: center; }
+        .map-btn {
+            background: none; border: none; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; padding-bottom: 5px; color: #888; transition: 0.3s; font-family: var(--font-main);
+        }
+        .map-btn.active { color: #222; border-bottom: 1px solid #222; }
+        .map-viewer {
+            position: relative; width: 100%; max-width: 1000px; margin: 0 auto;
+            aspect-ratio: 1.414 / 1; overflow: hidden;
+        }
+        .plan-base-img {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: contain; opacity: 0; transition: opacity 0.5s ease; z-index: 5;
+        }
+        .plan-base-img.active { opacity: 1; }
+        .svg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        .zone-poly { fill: transparent; stroke: transparent; cursor: pointer; transition: all 0.3s ease; }
+        .zone-poly:hover { fill: rgba(212, 93, 0, 0.15); stroke: rgba(212, 93, 0, 0.5); stroke-width: 2px; }
+        .floor-group { display: none; }
+        .floor-group.active { display: block; }
+        .preview-photo {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0; transition: opacity 0.4s ease;
+            z-index: 20; pointer-events: none; mix-blend-mode: multiply; 
+        }
+
+        #map-tooltip {
+            position: fixed; padding: 8px 12px; background: #1a1a1a; color: white;
+            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+            pointer-events: none; opacity: 0; z-index: 100; border-radius: 4px;
+            transform: translate(15px, 15px); transition: opacity 0.2s;
+        }
+
+        /* --- VIDEO --- */
+        .video-section { margin-top: 6rem; border-top: 1px solid #ddd; padding-top: 4rem; }
+        .video-wrapper {
+            position: relative; padding-bottom: 56.25%; height: 0; background: #000; overflow: hidden; margin-top: 2rem;
+        }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+
+        /* --- MODAL --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 10000;
+            display: none; flex-direction: column; padding: 4rem;
+            opacity: 0; transition: opacity 0.5s; overflow-y: auto;
+        }
+        .modal.open { display: flex; opacity: 1; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem; }
+        .modal-title { font-size: 2rem; font-weight: 300; text-transform: uppercase; }
+        .close-btn { cursor: pointer; font-size: 1rem; border-bottom: 1px solid #333; }
+        .modal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+        .modal-img {
+            width: 100%; height: 500px; object-fit: cover; opacity: 0; transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .modal-img.show { opacity: 1; transform: translateY(0); }
+        .modal-img:hover { transform: scale(0.98); }
+
+        footer { background: #1a1a1a; color: #fff; padding: 4rem; text-align: center; margin-top: 4rem; }
+    </style>
+</head>
+<body>
+
+    <!-- PRELOADER -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-title">Arbor House</div>
+        <div class="preloader-note">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
+            Headphones Recommended
+        </div>
+        <button class="enter-btn" onclick="enterSite()">Enter Experience</button>
+    </div>
+
+    <!-- AUDIO -->
+    <audio id="bg-audio" loop>
+        <source src="sound.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- PLAYER -->
+    <div class="audio-player">
+        <button class="play-btn" id="play-pause-btn" onclick="toggleAudio()">
+            <svg viewBox="0 0 24 24" id="icon-pause"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+            <svg viewBox="0 0 24 24" id="icon-play" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <input type="range" class="volume-slider" min="0" max="1" step="0.1" value="0.2" oninput="setVolume(this.value)">
+    </div>
+
+    <!-- TOOLTIP -->
+    <div id="map-tooltip">View Room</div>
+
+    <!-- NAV -->
+    <nav>
+        <div class="logo">Brown & Brown</div>
+        <div class="nav-links">
+            <span onclick="scrollToEl('.intro-grid')">Concept</span>
+            <span onclick="scrollToEl('.map-section')">Plan</span>
+            <span onclick="scrollToEl('.video-section')">Film</span>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+        <div class="hero-img"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">Arbor House</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- NEW DESCRIPTION SECTION -->
+        <section class="intro-grid reveal">
+            <div class="intro-header">
+                <h2>Crafting Privacy from<br>an Open Plot.</h2>
+                <p class="specs" style="margin-top: 1rem;">Aberdeen, Scotland &mdash; 2022</p>
+            </div>
+            <div class="intro-text">
+                <p>Designed by Brown & Brown Architects, Arbor House is a low-energy home nestled into a conservation area in Aberdeen. The project transforms an open, exposed plot into a private sanctuary through the clever use of a stone colonnade, which acts as a 'mental airlock' separating the bustle of the street from the calm of the home.</p>
+                <p>The structure is a study in material contrasts: board-marked concrete provides a weighty, grounding presence, while larch timber fins and expansive glazing allow light to filter through, creating a constant connection with the 'secret garden' courtyard. Inside, a double-height atrium with a sculptural spiral staircase draws daylight deep into the plan.</p>
+            </div>
+        </section>
+
+        <!-- MAP SECTION -->
+        <div style="text-align: center; margin-bottom: 3rem;" class="reveal">
+            <h2 style="font-size: 2rem; font-weight: 300;">Architectural Drawings</h2>
+            <p style="color: #666; margin-top:10px;">Select a zone to explore the details.</p>
+        </div>
+
+        <div class="map-section reveal">
+            <div class="map-controls">
+                <button class="map-btn active" onclick="switchFloor('GF')">Ground Floor</button>
+                <button class="map-btn" onclick="switchFloor('FF')">First Floor</button>
+            </div>
+
+            <div class="map-viewer">
+                <img src="GFPlan.jpg" id="img-GF" class="plan-base-img active" alt="Ground Floor">
+                <img src="FFPlan.jpg" id="img-FF" class="plan-base-img" alt="First Floor">
+                <img src="" id="preview-overlay" class="preview-photo" alt="">
+
+                <svg class="svg-overlay" viewBox="0 0 1000 707" preserveAspectRatio="none">
+                    <!-- GF ZONES -->
+                    <g id="svg-GF" class="floor-group active">
+                        <polygon class="zone-poly" points="500,140 730,140 730,385 500,385" data-zone="living_kitchen" data-label="Kitchen & Dining" data-preview="images/living_kitchen/3.jpg"></polygon>
+                        <polygon class="zone-poly" points="560,385 730,385 730,550 560,550" data-zone="living_kitchen" data-label="Living Lounge" data-preview="images/living_kitchen/1.jpg"></polygon>
+                        <polygon class="zone-poly" points="220,140 380,140 380,600 600,600 600,800 220,800" data-zone="exterior" data-label="Garage & Exterior" data-preview="images/exterior/1.jpg"></polygon>
+                    </g>
+                    <!-- FF ZONES -->
+                    <g id="svg-FF" class="floor-group">
+                        <polygon class="zone-poly" points="500,140 730,140 730,420 500,420" data-zone="master" data-label="Master Suite" data-preview="images/master/1.jpg"></polygon>
+                        <polygon class="zone-poly" points="220,140 460,140 460,420 220,420" data-zone="guest" data-label="Guest Wing" data-preview="images/guest/1.jpg"></polygon>
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <!-- VIDEO -->
+        <div class="video-section reveal">
+            <h2 style="font-size: 2rem; font-weight: 300; text-align:center;">In Motion</h2>
+            <div class="video-wrapper">
+                <iframe src="https://player.vimeo.com/video/797293899?title=0&byline=0&portrait=0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL -->
+    <div class="modal" id="gallery-modal">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modal-title">Gallery</h2>
+            <div class="close-btn" onclick="closeModal()">Close</div>
+        </div>
+        <div class="modal-grid" id="modal-grid"></div>
+    </div>
+
+    <footer>
+        <p>&copy; 2023 Brown & Brown Architects.</p>
+    </footer>
+
+    <script>
+        const galleryData = {
+            living_kitchen: Array.from({length: 10}, (_, i) => `images/living_kitchen/${i+1}.jpg`),
+            master: Array.from({length: 6}, (_, i) => `images/master/${i+1}.jpg`),
+            guest: ['images/guest/1.jpg'],
+            exterior: ['images/exterior/main.jpg', ...Array.from({length: 15}, (_, i) => `images/exterior/${i+1}.jpg`)]
+        };
+
+        // --- AUDIO ---
+        const audio = document.getElementById('bg-audio');
+        const playIcon = document.getElementById('icon-play');
+        const pauseIcon = document.getElementById('icon-pause');
+        let isPlaying = false;
+
+        function enterSite() {
+            document.getElementById('preloader').classList.add('hide');
+            document.body.classList.add('loaded');
+            audio.volume = 0.2;
+            audio.play().then(() => { isPlaying = true; updateIcons(); }).catch(e => { isPlaying = false; updateIcons(); });
+        }
+
+        function toggleAudio() {
+            if (isPlaying) { audio.pause(); isPlaying = false; } else { audio.play(); isPlaying = true; }
+            updateIcons();
+        }
+        function setVolume(val) { audio.volume = val; }
+        function updateIcons() {
+            if (isPlaying) { playIcon.style.display = 'none'; pauseIcon.style.display = 'block'; }
+            else { playIcon.style.display = 'block'; pauseIcon.style.display = 'none'; }
+        }
+
+        // --- MAP ---
+        const previewImg = document.getElementById('preview-overlay');
+        const tooltip = document.getElementById('map-tooltip');
+
+        function switchFloor(floorID) {
+            document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.plan-base-img').forEach(img => img.classList.remove('active'));
+            document.getElementById('img-' + floorID).classList.add('active');
+            document.querySelectorAll('.floor-group').forEach(g => g.classList.remove('active'));
+            document.getElementById('svg-' + floorID).classList.add('active');
+        }
+
+        document.querySelectorAll('.zone-poly').forEach(zone => {
+            zone.addEventListener('mouseenter', function() {
+                tooltip.style.opacity = '1'; tooltip.textContent = this.getAttribute('data-label');
+                const src = this.getAttribute('data-preview');
+                if(src) { previewImg.src = src; previewImg.style.opacity = '0.7'; }
+            });
+            zone.addEventListener('mousemove', function(e) {
+                tooltip.style.left = e.clientX + 'px'; tooltip.style.top = e.clientY + 'px';
+            });
+            zone.addEventListener('mouseleave', function() {
+                tooltip.style.opacity = '0'; previewImg.style.opacity = '0';
+            });
+            zone.addEventListener('click', function() { openGallery(this.getAttribute('data-zone')); });
+        });
+
+        // --- ANIMATION & GALLERY ---
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => { if(entry.isIntersecting) entry.target.classList.add('active'); });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        window.addEventListener('scroll', () => {
+            if(window.scrollY < window.innerHeight) document.querySelector('.hero-img').style.transform = `translateY(${window.scrollY * 0.5}px)`;
+        });
+
+        const modal = document.getElementById('gallery-modal');
+        const modalGrid = document.getElementById('modal-grid');
+        function openGallery(zone) {
+            modalGrid.innerHTML = '';
+            document.getElementById('modal-title').textContent = zone.replace('_', ' & ');
+            (galleryData[zone] || []).forEach((src, index) => {
+                const img = document.createElement('img'); img.src = src; img.className = 'modal-img';
+                img.onerror = function() { this.style.display = 'none'; };
+                modalGrid.appendChild(img);
+                setTimeout(() => img.classList.add('show'), 100 * index);
+            });
+            modal.classList.add('open'); document.body.style.overflow = 'hidden';
+        }
+        function closeModal() { modal.classList.remove('open'); document.body.style.overflow = 'auto'; }
+        function scrollToEl(sel) { document.querySelector(sel).scrollIntoView({behavior:'smooth'}); }
+    </script>
+</body>
+</html>
